@@ -1,223 +1,89 @@
 #ifndef MYLIST_HPP
 #define MYLIST_HPP
 
+#include <list>
 #include <stdexcept>
 
 template<typename ValueType>
 class MyList
 {
 private:
-    struct Node {
-        ValueType data;
-        Node* prev;
-        Node* next;
-        Node(const ValueType& val) : data(val), prev(nullptr), next(nullptr) {}
-    };
-
-    Node* head;
-    Node* tail;
-    int sz;
+    std::list<ValueType> lst;
 
 public:
-    MyList() : head(nullptr), tail(nullptr), sz(0) {}
-
-    MyList(MyList &&obj) noexcept : head(obj.head), tail(obj.tail), sz(obj.sz) {
-        obj.head = nullptr;
-        obj.tail = nullptr;
-        obj.sz = 0;
-    }
-
-    MyList(const MyList &obj) : head(nullptr), tail(nullptr), sz(0) {
-        Node* curr = obj.head;
-        while (curr) {
-            push_back(curr->data);
-            curr = curr->next;
-        }
-    }
-
-    ~MyList() {
-        clear();
-    }
+    MyList() = default;
+    MyList(MyList &&obj) noexcept : lst(std::move(obj.lst)) {}
+    MyList(const MyList &obj) : lst(obj.lst) {}
+    ~MyList() = default;
 
     MyList& operator=(const MyList& obj) {
         if (this != &obj) {
-            clear();
-            Node* curr = obj.head;
-            while (curr) {
-                push_back(curr->data);
-                curr = curr->next;
-            }
+            lst = obj.lst;
         }
         return *this;
     }
 
     MyList& operator=(MyList&& obj) noexcept {
         if (this != &obj) {
-            clear();
-            head = obj.head;
-            tail = obj.tail;
-            sz = obj.sz;
-            obj.head = nullptr;
-            obj.tail = nullptr;
-            obj.sz = 0;
+            lst = std::move(obj.lst);
         }
         return *this;
     }
 
-    void push_back(const ValueType &value) {
-        Node* newNode = new Node(value);
-        if (!tail) {
-            head = tail = newNode;
-        } else {
-            tail->next = newNode;
-            newNode->prev = tail;
-            tail = newNode;
-        }
-        sz++;
-    }
-
-    void pop_back() {
-        if (!tail) return;
-        Node* temp = tail;
-        if (head == tail) {
-            head = tail = nullptr;
-        } else {
-            tail = tail->prev;
-            tail->next = nullptr;
-        }
-        delete temp;
-        sz--;
-    }
-
-    void push_front(const ValueType &value) {
-        Node* newNode = new Node(value);
-        if (!head) {
-            head = tail = newNode;
-        } else {
-            newNode->next = head;
-            head->prev = newNode;
-            head = newNode;
-        }
-        sz++;
-    }
-
-    void pop_front() {
-        if (!head) return;
-        Node* temp = head;
-        if (head == tail) {
-            head = tail = nullptr;
-        } else {
-            head = head->next;
-            head->prev = nullptr;
-        }
-        delete temp;
-        sz--;
-    }
-
-    ValueType &front() const {
-        if (!head) throw std::out_of_range("List is empty");
-        return head->data;
-    }
-
-    ValueType &back() const {
-        if (!tail) throw std::out_of_range("List is empty");
-        return tail->data;
-    }
+    void push_back(const ValueType &value) { lst.push_back(value); }
+    void pop_back() { lst.pop_back(); }
+    void push_front(const ValueType &value) { lst.push_front(value); }
+    void pop_front() { lst.pop_front(); }
+    
+    ValueType &front() { return lst.front(); }
+    const ValueType &front() const { return lst.front(); }
+    
+    ValueType &back() { return lst.back(); }
+    const ValueType &back() const { return lst.back(); }
 
     void insert(int index, const ValueType &value) {
-        if (index < 0 || index > sz) throw std::out_of_range("Index out of range");
-        if (index == 0) {
-            push_front(value);
-        } else if (index == sz) {
-            push_back(value);
+        auto it = lst.begin();
+        int sz = lst.size();
+        if (index > sz / 2) {
+            it = lst.end();
+            for (int i = sz; i > index; i--) --it;
         } else {
-            Node* curr = head;
-            for (int i = 0; i < index; i++) {
-                curr = curr->next;
-            }
-            Node* newNode = new Node(value);
-            newNode->prev = curr->prev;
-            newNode->next = curr;
-            curr->prev->next = newNode;
-            curr->prev = newNode;
-            sz++;
+            for (int i = 0; i < index; i++) ++it;
         }
+        lst.insert(it, value);
     }
 
     void erase(int index) {
-        if (index < 0 || index >= sz) throw std::out_of_range("Index out of range");
-        if (index == 0) {
-            pop_front();
-        } else if (index == sz - 1) {
-            pop_back();
+        auto it = lst.begin();
+        int sz = lst.size();
+        if (index > sz / 2) {
+            it = lst.end();
+            for (int i = sz; i > index; i--) --it;
         } else {
-            Node* curr = head;
-            for (int i = 0; i < index; i++) {
-                curr = curr->next;
-            }
-            curr->prev->next = curr->next;
-            curr->next->prev = curr->prev;
-            delete curr;
-            sz--;
+            for (int i = 0; i < index; i++) ++it;
         }
+        lst.erase(it);
     }
 
-    int size() const {
-        return sz;
-    }
-
-    bool empty() const {
-        return sz == 0;
-    }
-
-    void clear() {
-        while (head) {
-            Node* temp = head;
-            head = head->next;
-            delete temp;
-        }
-        tail = nullptr;
-        sz = 0;
-    }
+    int size() const { return lst.size(); }
+    bool empty() const { return lst.empty(); }
+    void clear() { lst.clear(); }
 
     void link(const MyList &obj) {
-        Node* curr = obj.head;
-        while (curr) {
-            push_back(curr->data);
-            curr = curr->next;
-        }
+        lst.insert(lst.end(), obj.lst.begin(), obj.lst.end());
     }
 
     MyList cut(int index) {
-        if (index < 0 || index > sz) throw std::out_of_range("Index out of range");
         MyList result;
-        if (index == sz) {
-            return result;
+        auto it = lst.begin();
+        int sz = lst.size();
+        if (index > sz / 2) {
+            it = lst.end();
+            for (int i = sz; i > index; i--) --it;
+        } else {
+            for (int i = 0; i < index; i++) ++it;
         }
-        if (index == 0) {
-            result.head = head;
-            result.tail = tail;
-            result.sz = sz;
-            head = tail = nullptr;
-            sz = 0;
-            return result;
-        }
-        
-        Node* curr = head;
-        for (int i = 0; i < index; i++) {
-            curr = curr->next;
-        }
-        
-        result.head = curr;
-        result.tail = tail;
-        result.sz = sz - index;
-        
-        tail = curr->prev;
-        tail->next = nullptr;
-        curr->prev = nullptr;
-        
-        sz = index;
-        
+        result.lst.splice(result.lst.end(), lst, it, lst.end());
         return result;
     }
 };
